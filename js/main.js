@@ -1,684 +1,642 @@
 /**
- * main.js - Sistema de Monitoreo Eléctrico WattVision
- * Lógica principal del dashboard técnico de monitoreo
- * Cumple con: Fetch asíncrono (async/await/try-catch-finally), manipulación del DOM,
- * funciones de orden superior (reduce, filter, map, find, forEach, some, sort),
- * operadores avanzados, Chart.js, SweetAlert2 y Toastify.
+ * main.js
+ * Lógica principal del simulador de tienda online TechZone
+ * Integra carga asíncrona de datos con fetch (async/await/try-catch-finally),
+ * manipulación dinámica del DOM, funciones de orden superior,
+ * operadores avanzados, librerías externas (SweetAlert2 y Toastify) y checkout completo.
+ * Paleta tranquila, colores sólidos y sin gradientes.
  */
 
 // Estado global de la aplicación
-let listaDispositivos = [];
-let filtroAmbienteActivo = "todos";
-let filtroEstadoActivo = "todos";
-let graficoConsumo = null;
-let tarifaKwhBs = obtenerTarifaStorage();
+let productosDisponibles = [];
+let carritoCompras = obtenerCarritoStorage();
+let categoriaActiva = "todas";
+let busquedaActiva = "";
+let ordenActivo = "defecto";
 
-// Referencias del DOM
-const kpiPotenciaWatts = document.getElementById("kpi-potencia-watts");
-const kpiConsumoKwh = document.getElementById("kpi-consumo-kwh");
-const kpiCostoBs = document.getElementById("kpi-costo-bs");
-const badgeEstadoEnVivo = document.getElementById("badge-estado-envivo");
-
-const contenedorAlertas = document.getElementById("contenedor-alertas");
-const contadorAlertasBadge = document.getElementById("contador-alertas");
-const contenedorTarjetas = document.getElementById("contenedor-dispositivos");
-const spinnerCarga = document.getElementById("spinner-carga");
-
-const botonesFiltroAmbiente = document.querySelectorAll(".btn-filtro-ambiente");
-const selectFiltroEstado = document.getElementById("select-filtro-estado");
-const inputBuscador = document.getElementById("input-buscador-disp");
-
-const btnAgregarDispositivo = document.getElementById("btn-agregar-dispositivo");
-const btnRestablecerDatos = document.getElementById("btn-restablecer-datos");
-const modalDispositivo = document.getElementById("modal-dispositivo");
-const btnCerrarModal = document.getElementById("btn-cerrar-modal");
-const formularioDispositivo = document.getElementById("formulario-dispositivo");
-
-const btnSimularAhorro = document.getElementById("btn-simular-ahorro");
-const cajaSimuladorAhorro = document.getElementById("caja-simulador-ahorro");
+// Referencias a elementos del DOM
+const contenedorProductos = document.getElementById("contenedor-productos");
+const contenedorCarrito = document.getElementById("contenedor-carrito");
+const contadorCarritoBadge = document.getElementById("contador-carrito");
+const textoTotalCarrito = document.getElementById("total-carrito");
+const textoCantidadItems = document.getElementById("cantidad-items-carrito");
+const panelCarrito = document.getElementById("panel-carrito");
+const overlayCarrito = document.getElementById("overlay-carrito");
+const botonAbrirCarrito = document.getElementById("btn-abrir-carrito");
+const botonCerrarCarrito = document.getElementById("btn-cerrar-carrito");
+const botonVaciarCarrito = document.getElementById("btn-vaciar-carrito");
+const botonIniciarCompra = document.getElementById("btn-iniciar-compra");
+const inputBuscador = document.getElementById("input-buscador");
+const selectOrden = document.getElementById("select-orden");
+const botonesCategorias = document.querySelectorAll(".btn-categoria");
+const modalCheckout = document.getElementById("modal-checkout");
+const botonCerrarModal = document.getElementById("btn-cerrar-modal");
+const formularioCheckout = document.getElementById("formulario-checkout");
+const contenedorSpinner = document.getElementById("spinner-carga");
+const totalModalCheckout = document.getElementById("total-modal-checkout");
+const selectMetodoPago = document.getElementById("metodo-pago");
+const textoDescuentoModal = document.getElementById("descuento-modal-checkout");
 
 /**
- * Notificación Toastify con tema técnico oscuro
- * @param {string} texto - Mensaje a mostrar
- * @param {string} tipo - "cyan" | "alert" | "lime"
+ * Notificación rápida flotante mediante Toastify (Colores sólidos y tranquilos)
+ * @param {string} mensaje - Texto descriptivo
+ * @param {string} tipo - "success" | "warning" | "danger"
  */
-const notificarTecnico = (texto, tipo = "cyan") => {
-  const estilos = {
-    cyan: { background: "#1E1E1E", border: "1px solid #00E5FF", color: "#00E5FF" },
-    alert: { background: "#3A1C1C", border: "1px solid #FF453A", color: "#FF453A" },
-    lime: { background: "#1E1E1E", border: "1px solid #32D74B", color: "#32D74B" }
+const mostrarNotificacion = (mensaje, tipo = "success") => {
+  const coloresSolidos = {
+    success: "#2e7d32",
+    warning: "#d97706",
+    danger: "#c62828"
   };
 
-  const config = estilos[tipo] || estilos.cyan;
-
   Toastify({
-    text: texto,
-    duration: 2600,
+    text: mensaje,
+    duration: 2500,
     gravity: "top",
     position: "right",
     stopOnFocus: true,
     style: {
-      background: config.background,
-      border: config.border,
-      color: config.color,
-      borderRadius: "10px",
-      fontFamily: "'Inter', sans-serif",
-      fontSize: "13px",
-      fontWeight: "600",
-      boxShadow: "0 8px 24px rgba(0,0,0,0.6)"
+      background: coloresSolidos[tipo] || coloresSolidos.success,
+      borderRadius: "6px",
+      fontWeight: "500",
+      fontSize: "0.88rem",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
     }
   }).showToast();
 };
 
 /**
- * Carga de datos asíncrona mediante Fetch, Async/Await y Try/Catch/Finally
+ * Carga de datos asíncrona mediante Fetch, Async/Await y bloque Try/Catch/Finally
  */
-const inicializarDatos = async () => {
-  if (spinnerCarga) spinnerCarga.classList.remove("oculto");
+const cargarProductos = async () => {
+  if (contenedorSpinner) {
+    contenedorSpinner.classList.remove("oculto");
+  }
 
   try {
-    const dispositivosEnStorage = obtenerDispositivosStorage();
+    const respuesta = await fetch("./data/productos.json");
 
-    // Operador ternario para priorizar almacenamiento local o cargar JSON inicial
-    if (dispositivosEnStorage && dispositivosEnStorage.length > 0) {
-      listaDispositivos = dispositivosEnStorage;
-    } else {
-      const respuesta = await fetch("./data/dispositivos.json");
-      if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
-      const datos = await respuesta.json();
-      listaDispositivos = datos;
-      guardarDispositivosStorage(listaDispositivos);
+    if (!respuesta.ok) {
+      throw new Error(`Error en la petición HTTP: ${respuesta.status}`);
     }
 
-    renderizarDashboardCompleto();
+    const datos = await respuesta.json();
+    productosDisponibles = datos;
+
+    // Renderizado inicial con los datos obtenidos
+    filtrarYRenderizarCatalogo();
   } catch (error) {
+    contenedorProductos.innerHTML = `
+      <div class="mensaje-error">
+        <h3>Hubo un problema al cargar los productos</h3>
+        <p>Por favor, recarga la página o intenta de nuevo más tarde.</p>
+        <button id="btn-reintentar" class="btn btn-primario" style="margin-top: 10px;">Reintentar</button>
+      </div>
+    `;
+
+    const botonReintentar = document.getElementById("btn-reintentar");
+    if (botonReintentar) {
+      botonReintentar.addEventListener("click", cargarProductos);
+    }
+
     Swal.fire({
       icon: "error",
-      title: "Error de Telemetría",
-      text: "No se pudieron obtener los datos de telemetría de WattVision.",
-      background: "#1E1E1E",
-      color: "#FFFFFF",
-      confirmButtonColor: "#00E5FF"
+      title: "Error de conexión",
+      text: "No se pudieron obtener los productos desde el servidor local.",
+      confirmButtonColor: "#2c3e50"
     });
   } finally {
-    if (spinnerCarga) spinnerCarga.classList.add("oculto");
-  }
-};
-
-/**
- * Calcula métricas clave (KPIs) usando funciones de orden superior (reduce, filter)
- */
-const calcularMetricasKPI = () => {
-  // Dispositivos encendidos actualmente
-  const dispositivosActivos = listaDispositivos.filter(
-    (disp) => disp.estado === "activo" || disp.estado === "alerta" || disp.estado === "vampiro"
-  );
-
-  // Uso de reduce para potencia instantánea total en Watts
-  const totalWatts = dispositivosActivos.reduce(
-    (acum, disp) => acum + disp.potenciaWatts,
-    0
-  );
-
-  // Uso de reduce para consumo acumulado en kWh
-  const totalKwh = listaDispositivos.reduce(
-    (acum, disp) => acum + disp.consumoKwh,
-    0
-  );
-
-  // Uso de reduce para gasto total en Bolivianos (Bs.)
-  const totalBs = listaDispositivos.reduce(
-    (acum, disp) => acum + disp.costoBs,
-    0
-  );
-
-  return { totalWatts, totalKwh, totalBs, cantidadActivos: dispositivosActivos.length };
-};
-
-/**
- * Actualiza los valores de los 3 KPIs superiores en el DOM
- */
-const actualizarKpisDOM = () => {
-  const { totalWatts, totalKwh, totalBs, cantidadActivos } = calcularMetricasKPI();
-
-  kpiPotenciaWatts.textContent = `${totalWatts.toLocaleString("es-BO")} W`;
-  kpiConsumoKwh.textContent = `${totalKwh.toFixed(1)} kWh`;
-  kpiCostoBs.textContent = `Bs. ${totalBs.toFixed(2)}`;
-
-  if (badgeEstadoEnVivo) {
-    badgeEstadoEnVivo.textContent = `EN VIVO • ${cantidadActivos} ACTIVOS`;
-  }
-};
-
-/**
- * Renderiza el Panel de Alertas en vivo
- * Identifica consumo vampiro y sobrecargas de potencia
- */
-const renderizarPanelAlertas = () => {
-  contenedorAlertas.innerHTML = "";
-
-  // Filtramos dispositivos en estado 'alerta' o 'vampiro' mediante filter
-  const dispositivosEnAlerta = listaDispositivos.filter(
-    (disp) => disp.estado === "alerta" || disp.esVampiro === true
-  );
-
-  contadorAlertasBadge.textContent = dispositivosEnAlerta.length;
-
-  if (dispositivosEnAlerta.length === 0) {
-    contenedorAlertas.innerHTML = `
-      <div class="caja-alerta-vacia">
-        <i class="fa-solid fa-shield-check" style="color: #32D74B; font-size: 24px; margin-bottom: 8px;"></i>
-        <p style="color: #98989D; font-size: 13px;">Sin anomalías eléctricas detectadas en el sistema.</p>
-      </div>
-    `;
-    return;
-  }
-
-  dispositivosEnAlerta.forEach((disp) => {
-    const { id, nombre, potenciaWatts, limiteWatts, ambiente, esVampiro } = disp;
-    const tarjetaAlerta = document.createElement("div");
-    tarjetaAlerta.className = "alerta-item";
-
-    const esSobreLimite = potenciaWatts > limiteWatts;
-
-    tarjetaAlerta.innerHTML = `
-      <div class="alerta-icono">
-        <i class="fa-solid ${esVampiro ? "fa-plug-circle-exclamation" : "fa-triangle-exclamation"}"></i>
-      </div>
-      <div class="alerta-info">
-        <div class="alerta-titulo-fila">
-          <strong class="alerta-titulo">${nombre}</strong>
-          <span class="alerta-tag">${esVampiro ? "STANDBY VAMPIRO" : "PICO DE CONSUMO"}</span>
-        </div>
-        <p class="alerta-descripcion">
-          ${esVampiro
-            ? `Consume <strong>${potenciaWatts}W</strong> estando en reposo en <em>${ambiente}</em>.`
-            : `Potencia actual de <strong>${potenciaWatts}W</strong> supera el umbral límite (${limiteWatts}W).`
-          }
-        </p>
-        <button class="btn-desconectar-alerta" data-id="${id}">
-          <i class="fa-solid fa-power-off"></i> Aislar / Desconectar
-        </button>
-      </div>
-    `;
-
-    contenedorAlertas.appendChild(tarjetaAlerta);
-  });
-
-  // Eventos de botones de desconexión en el panel de alertas
-  contenedorAlertas.querySelectorAll(".btn-desconectar-alerta").forEach((boton) => {
-    boton.addEventListener("click", () => {
-      const id = Number(boton.getAttribute("data-id"));
-      conmutarEstadoDispositivo(id, "inactivo");
-    });
-  });
-};
-
-/**
- * Inicializa y renderiza el Gráfico de Área interactivo de 24 horas usando Chart.js
- * Cumple con el estilo de DESIGN.md: Líneas de grid #2C2C2E, datos en #00E5FF y gradiente #30D158.
- */
-const renderizarGraficoArea = () => {
-  const canvas = document.getElementById("grafico-consumo");
-  if (!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-
-  // Destruir gráfico previo si ya existía para evitar solapamientos
-  if (graficoConsumo) {
-    graficoConsumo.destroy();
-  }
-
-  // Gradiente de área acorde al DESIGN.md (#00E5FF a #32D74B semitransparente)
-  const gradiente = ctx.createLinearGradient(0, 0, 0, 300);
-  gradiente.addColorStop(0, "rgba(0, 229, 255, 0.45)");
-  gradiente.addColorStop(0.7, "rgba(50, 215, 75, 0.15)");
-  gradiente.addColorStop(1, "rgba(30, 30, 30, 0.0)");
-
-  // Generamos datos horarios de las últimas 24 horas simulados de la carga
-  const horas = [
-    "00:00", "02:00", "04:00", "06:00", "08:00", "10:00",
-    "12:00", "14:00", "16:00", "18:00", "20:00", "22:00", "Ahora"
-  ];
-
-  const potenciaBase = listaDispositivos
-    .filter((d) => d.estado !== "inactivo")
-    .reduce((acc, d) => acc + d.potenciaWatts, 0);
-
-  // Mapeo dinámico de datos de potencia usando función map
-  const valoresWatts = [
-    potenciaBase * 0.4,
-    potenciaBase * 0.35,
-    potenciaBase * 0.32,
-    potenciaBase * 0.55,
-    potenciaBase * 0.85,
-    potenciaBase * 0.9,
-    potenciaBase * 1.15,
-    potenciaBase * 1.05,
-    potenciaBase * 0.95,
-    potenciaBase * 1.25,
-    potenciaBase * 1.35,
-    potenciaBase * 1.1,
-    potenciaBase
-  ].map((v) => Math.round(v));
-
-  graficoConsumo = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: horas,
-      datasets: [
-        {
-          label: "Demanda en Watts (W)",
-          data: valoresWatts,
-          borderColor: "#00E5FF",
-          borderWidth: 2,
-          backgroundColor: gradiente,
-          fill: true,
-          tension: 0.38,
-          pointBackgroundColor: "#00E5FF",
-          pointBorderColor: "#121212",
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: "#1E1E1E",
-          borderColor: "#2C2C2E",
-          borderWidth: 1,
-          titleColor: "#FFFFFF",
-          bodyColor: "#00E5FF",
-          titleFont: { family: "Inter", size: 12 },
-          bodyFont: { family: "JetBrains Mono", size: 13, weight: "bold" },
-          padding: 10,
-          displayColors: false,
-          callbacks: {
-            label: (contexto) => {
-              const watts = contexto.parsed.y;
-              const kwhEstimado = (watts / 1000).toFixed(2);
-              const bolivianos = (kwhEstimado * tarifaKwhBs).toFixed(2);
-              return `${watts} W (${kwhEstimado} kW • Bs. ${bolivianos}/h)`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: "#2C2C2E", drawBorder: false },
-          ticks: { color: "#98989D", font: { family: "Inter", size: 11 } }
-        },
-        y: {
-          grid: { color: "#2C2C2E", drawBorder: false },
-          ticks: {
-            color: "#98989D",
-            font: { family: "JetBrains Mono", size: 11 },
-            callback: (val) => `${val} W`
-          }
-        }
-      }
+    if (contenedorSpinner) {
+      contenedorSpinner.classList.add("oculto");
     }
-  });
+  }
 };
 
 /**
- * Filtra y renderiza la lista y tarjetas de dispositivos
- * Usa filter, sort, forEach y destructuring
+ * Aplica filtros de categoría, búsqueda y ordenamiento usando funciones de orden superior
+ * (filter, sort, forEach)
  */
-const renderizarDispositivosDOM = () => {
-  contenedorTarjetas.innerHTML = "";
+const filtrarYRenderizarCatalogo = () => {
+  // Filtro por categoría con operador ternario y filter
+  let productosFiltrados = categoriaActiva === "todas"
+    ? [...productosDisponibles]
+    : productosDisponibles.filter((prod) => prod.categoria === categoriaActiva);
 
-  // Filtro por ambiente con operador ternario y filter
-  let lista = filtroAmbienteActivo === "todos"
-    ? [...listaDispositivos]
-    : listaDispositivos.filter((d) => d.ambiente === filtroAmbienteActivo);
-
-  // Filtro por estado
-  if (filtroEstadoActivo !== "todos") {
-    lista = lista.filter((d) => d.estado === filtroEstadoActivo);
-  }
-
-  // Filtro por búsqueda de texto
-  const busqueda = inputBuscador.value.trim().toLowerCase();
-  if (busqueda !== "") {
-    lista = lista.filter((d) =>
-      d.nombre.toLowerCase().includes(busqueda) ||
-      d.ambiente.toLowerCase().includes(busqueda)
+  // Filtro por término de búsqueda con filter
+  if (busquedaActiva.trim() !== "") {
+    const busquedaMinuscula = busquedaActiva.toLowerCase().trim();
+    productosFiltrados = productosFiltrados.filter((prod) =>
+      prod.nombre.toLowerCase().includes(busquedaMinuscula) ||
+      prod.descripcion.toLowerCase().includes(busquedaMinuscula)
     );
   }
 
-  // Ordenamiento: dispositivos con alertas o vampiros primero
-  lista.sort((a, b) => (b.estado === "alerta" ? 1 : 0) - (a.estado === "alerta" ? 1 : 0));
+  // Ordenamiento con sort y operadores ternarios
+  if (ordenActivo === "precio-menor") {
+    productosFiltrados.sort((a, b) => a.precio - b.precio);
+  } else if (ordenActivo === "precio-mayor") {
+    productosFiltrados.sort((a, b) => b.precio - a.precio);
+  } else if (ordenActivo === "nombre-az") {
+    productosFiltrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }
+
+  renderizarTarjetasProductos(productosFiltrados);
+};
+
+/**
+ * Renderiza dinámicamente las tarjetas de productos en el catálogo
+ * Uso de forEach y Destructuring
+ * @param {Array} lista - Array de objetos de productos a mostrar
+ */
+const renderizarTarjetasProductos = (lista) => {
+  contenedorProductos.innerHTML = "";
 
   if (lista.length === 0) {
-    contenedorTarjetas.innerHTML = `
-      <div class="caja-sin-dispositivos">
-        <i class="fa-solid fa-gauge-high" style="font-size: 32px; color: #98989D; margin-bottom: 8px;"></i>
-        <p style="color: #98989D; font-size: 14px;">No se encontraron dispositivos con los filtros seleccionados.</p>
+    contenedorProductos.innerHTML = `
+      <div class="sin-resultados">
+        <i class="fa-solid fa-box-open icono-sin-resultados"></i>
+        <h3>No se encontraron productos</h3>
+        <p>Intenta con otra palabra clave o selecciona otra categoría.</p>
       </div>
     `;
     return;
   }
 
-  // Uso de forEach para construir cada fila/tarjeta de dispositivo
-  lista.forEach((disp) => {
-    const { id, nombre, ambiente, potenciaWatts, consumoKwh, costoBs, estado, esVampiro, limiteWatts } = disp;
-    const fila = document.createElement("div");
-    fila.className = `dispositivo-fila ${estado === "alerta" ? "fila-alerta" : ""}`;
+  // Uso de forEach para recorrer y renderizar cada producto
+  lista.forEach((producto) => {
+    // Destructuring del objeto producto
+    const { id, nombre, categoria, precio, stock, imagen, descripcion } = producto;
 
-    const estaEncendido = estado !== "inactivo";
-    const estadoEtiqueta = esVampiro
-      ? "STANDBY VAMPIRO"
-      : estado === "alerta"
-      ? "SOBRECARGA"
-      : estado === "activo"
-      ? "NORMAL"
-      : "APAGADO";
+    // Verificamos cuántas unidades ya están en el carrito
+    const itemEnCarrito = carritoCompras.find((item) => item.id === id);
+    const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
+    const stockDisponible = stock - cantidadEnCarrito;
+    const hayStock = stockDisponible > 0;
 
-    fila.innerHTML = `
-      <div class="dispositivo-col-ident">
-        <div class="dispositivo-icono ${estaEncendido ? "icono-activo" : "icono-inactivo"}">
-          <i class="fa-solid ${esVampiro ? "fa-plug" : "fa-bolt"}"></i>
+    const tarjeta = document.createElement("article");
+    tarjeta.className = "tarjeta-producto";
+    tarjeta.innerHTML = `
+      <div class="tarjeta-imagen-contenedor">
+        <img src="${imagen}" alt="${nombre}" loading="lazy" class="tarjeta-imagen" />
+        <span class="badge-categoria">${categoria.toUpperCase()}</span>
+      </div>
+      <div class="tarjeta-cuerpo">
+        <h3 class="tarjeta-titulo">${nombre}</h3>
+        <p class="tarjeta-descripcion">${descripcion}</p>
+        <div class="tarjeta-detalles">
+          <span class="tarjeta-precio">$${precio.toLocaleString("es-AR")}</span>
+          <span class="tarjeta-stock ${hayStock ? "stock-ok" : "stock-agotado"}">
+            ${hayStock ? `Stock: ${stockDisponible}` : "Agotado"}
+          </span>
         </div>
-        <div class="dispositivo-textos">
-          <span class="dispositivo-nombre">${nombre}</span>
-          <span class="dispositivo-ambiente"><i class="fa-solid fa-location-dot"></i> ${ambiente}</span>
-        </div>
-      </div>
-
-      <div class="dispositivo-col-potencia">
-        <span class="metrica-mono ${estaEncendido ? "texto-cian" : "texto-apagado"}">${estaEncendido ? `${potenciaWatts} W` : "0 W"}</span>
-        <span class="metrica-sub">Límite: ${limiteWatts}W</span>
-      </div>
-
-      <div class="dispositivo-col-consumo">
-        <span class="metrica-mono">${consumoKwh.toFixed(1)} kWh</span>
-        <span class="metrica-sub bolivianos">Bs. ${costoBs.toFixed(2)}</span>
-      </div>
-
-      <div class="dispositivo-col-estado">
-        <span class="tag-estado tag-${estado}">${estadoEtiqueta}</span>
-      </div>
-
-      <div class="dispositivo-col-acciones">
-        <!-- Switch interruptor inteligente -->
-        <label class="switch-interruptor" title="${estaEncendido ? "Apagar dispositivo" : "Encender dispositivo"}">
-          <input type="checkbox" class="check-interruptor" data-id="${id}" ${estaEncendido ? "checked" : ""}>
-          <span class="slider-switch"></span>
-        </label>
-        
-        <button class="btn-icono-accion btn-eliminar-disp" data-id="${id}" title="Eliminar del monitoreo">
-          <i class="fa-solid fa-trash-can"></i>
+        <button 
+          class="btn ${hayStock ? "btn-primario" : "btn-deshabilitado"} btn-agregar" 
+          data-id="${id}"
+          ${hayStock ? "" : "disabled"}
+        >
+          <i class="fa-solid fa-cart-plus"></i> ${hayStock ? "Agregar al Carrito" : "Sin Stock"}
         </button>
       </div>
     `;
 
-    contenedorTarjetas.appendChild(fila);
+    contenedorProductos.appendChild(tarjeta);
   });
 
-  // Listeners para switches de encendido/apagado
-  contenedorTarjetas.querySelectorAll(".check-interruptor").forEach((chk) => {
-    chk.addEventListener("change", (e) => {
-      const id = Number(chk.getAttribute("data-id"));
-      const nuevoEstado = e.target.checked ? "activo" : "inactivo";
-      conmutarEstadoDispositivo(id, nuevoEstado);
-    });
-  });
-
-  // Listeners para eliminar dispositivo
-  contenedorTarjetas.querySelectorAll(".btn-eliminar-disp").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = Number(btn.getAttribute("data-id"));
-      confirmarEliminarDispositivo(id);
+  // Asignación de eventos a los botones de agregar
+  const botonesAgregar = contenedorProductos.querySelectorAll(".btn-agregar");
+  botonesAgregar.forEach((boton) => {
+    boton.addEventListener("click", () => {
+      const idSeleccionado = Number(boton.getAttribute("data-id"));
+      agregarProductoAlCarrito(idSeleccionado);
     });
   });
 };
 
 /**
- * Conmuta el estado de un dispositivo (activo/inactivo) y actualiza el storage
- * @param {number} idDispositivo - ID del dispositivo
- * @param {string} nuevoEstado - "activo" | "inactivo"
+ * Agrega un producto al carrito respetando el stock disponible
+ * Uso de find, some, destructuring y persistencia en LocalStorage
+ * @param {number} idProducto - ID del producto a agregar
  */
-const conmutarEstadoDispositivo = (idDispositivo, nuevoEstado) => {
-  const dispositivo = listaDispositivos.find((d) => d.id === idDispositivo);
-  if (!dispositivo) return;
+const agregarProductoAlCarrito = (idProducto) => {
+  const productoSeleccionado = productosDisponibles.find((prod) => prod.id === idProducto);
 
-  const { nombre } = dispositivo;
-  const esApagado = nuevoEstado === "inactivo";
+  if (!productoSeleccionado) return;
 
-  // Actualizamos el storage usando la función de storage.js
-  listaDispositivos = actualizarDispositivoStorage(idDispositivo, {
-    estado: nuevoEstado,
-    esVampiro: esApagado ? false : dispositivo.esVampiro
-  });
+  const { id, nombre, precio, stock, imagen } = productoSeleccionado;
 
-  notificarTecnico(
-    `Dispositivo "${nombre}" ${esApagado ? "desconectado" : "conectado en red"}.`,
-    esApagado ? "alert" : "lime"
-  );
+  // Verificamos si ya existe en el carrito usando some
+  const yaExiste = carritoCompras.some((item) => item.id === id);
 
-  renderizarDashboardCompleto();
-};
+  if (yaExiste) {
+    const itemExistente = carritoCompras.find((item) => item.id === id);
 
-/**
- * Elimina un dispositivo con confirmación mediante SweetAlert2
- * @param {number} idDispositivo - ID del dispositivo
- */
-const confirmarEliminarDispositivo = (idDispositivo) => {
-  const dispositivo = listaDispositivos.find((d) => d.id === idDispositivo);
-  const nombre = dispositivo ? dispositivo.nombre : "Dispositivo";
-
-  Swal.fire({
-    title: "¿Eliminar del monitoreo?",
-    text: `Dejarás de recibir telemetría de "${nombre}".`,
-    icon: "warning",
-    showCancelButton: true,
-    background: "#1E1E1E",
-    color: "#FFFFFF",
-    confirmButtonColor: "#FF453A",
-    cancelButtonColor: "#2C2C2E",
-    confirmButtonText: "Sí, desconectar sensor",
-    cancelButtonText: "Cancelar"
-  }).then((res) => {
-    if (res.isConfirmed) {
-      listaDispositivos = eliminarDispositivoStorage(idDispositivo);
-      notificarTecnico(`"${nombre}" removido de WattVision.`, "cyan");
-      renderizarDashboardCompleto();
+    if (itemExistente.cantidad >= stock) {
+      Swal.fire({
+        icon: "warning",
+        title: "Límite de stock alcanzado",
+        text: `No disponemos de más de ${stock} unidades de "${nombre}".`,
+        confirmButtonColor: "#2c3e50"
+      });
+      return;
     }
-  });
+
+    // Incrementamos la cantidad y actualizamos en storage
+    carritoCompras = actualizarCantidadStorage(id, itemExistente.cantidad + 1);
+    mostrarNotificacion(`Se añadió otra unidad de "${nombre}"`, "success");
+  } else {
+    // Si no existía, lo incorporamos al carrito
+    const nuevoItem = {
+      id,
+      nombre,
+      precio,
+      stock,
+      imagen,
+      cantidad: 1
+    };
+
+    carritoCompras = [...carritoCompras, nuevoItem];
+    guardarCarritoStorage(carritoCompras);
+    mostrarNotificacion(`"${nombre}" añadido al carrito`, "success");
+  }
+
+  actualizarVistaCarrito();
+  filtrarYRenderizarCatalogo();
 };
 
 /**
- * Registra un nuevo dispositivo/medidor inteligente mediante modal
+ * Modifica la cantidad de unidades de un producto dentro del carrito
+ * @param {number} idProducto - ID del producto
+ * @param {number} cambio - Cantidad a sumar o restar (+1 ó -1)
  */
-const agregarNuevoDispositivo = (evento) => {
-  evento.preventDefault();
+const modificarCantidadProducto = (idProducto, cambio) => {
+  const item = carritoCompras.find((prod) => prod.id === idProducto);
+  if (!item) return;
 
-  const nombre = document.getElementById("nuevo-disp-nombre").value.trim();
-  const ambiente = document.getElementById("nuevo-disp-ambiente").value.trim();
-  const potenciaWatts = Number(document.getElementById("nuevo-disp-potencia").value);
-  const limiteWatts = Number(document.getElementById("nuevo-disp-limite").value) || potenciaWatts * 1.2;
-  const esVampiro = document.getElementById("nuevo-disp-vampiro").checked;
+  const nuevaCantidad = item.cantidad + cambio;
 
-  if (!nombre || !ambiente || isNaN(potenciaWatts) || potenciaWatts <= 0) {
+  if (nuevaCantidad > item.stock) {
     Swal.fire({
-      icon: "error",
-      title: "Parámetros incompletos",
-      text: "Ingresa nombre, ambiente y potencia válida en Watts.",
-      background: "#1E1E1E",
-      color: "#FFFFFF",
-      confirmButtonColor: "#00E5FF"
+      icon: "info",
+      title: "Stock máximo",
+      text: `Has alcanzado el límite de existencias (${item.stock} unidades).`,
+      confirmButtonColor: "#2c3e50"
     });
     return;
   }
 
-  // Estimación mensual aproximada (4h diarias = 120h al mes)
-  const horasMes = esVampiro ? 720 : 120;
-  const consumoKwhEstimado = (potenciaWatts * horasMes) / 1000;
-  const costoBsEstimado = consumoKwhEstimado * tarifaKwhBs;
-
-  const nuevoId = Date.now();
-  const nuevoItem = {
-    id: nuevoId,
-    nombre,
-    ambiente,
-    potenciaWatts,
-    consumoKwh: Number(consumoKwhEstimado.toFixed(1)),
-    costoBs: Number(costoBsEstimado.toFixed(2)),
-    estado: esVampiro ? "vampiro" : potenciaWatts > limiteWatts ? "alerta" : "activo",
-    esVampiro,
-    limiteWatts
-  };
-
-  listaDispositivos = [...listaDispositivos, nuevoItem];
-  guardarDispositivosStorage(listaDispositivos);
-
-  formularioDispositivo.reset();
-  modalDispositivo.classList.remove("activo");
-
-  notificarTecnico(`Sensor de telemetría "${nombre}" calibrado y conectado.`, "lime");
-  renderizarDashboardCompleto();
-};
-
-/**
- * Simulador de Ahorro desconectando consumos Vampiro
- * Uso de reduce para cuantificar el ahorro en kWh y Bolivianos
- */
-const calcularSimulacionAhorro = () => {
-  const vampiros = listaDispositivos.filter((d) => d.esVampiro === true);
-
-  if (vampiros.length === 0) {
-    cajaSimuladorAhorro.innerHTML = `
-      <div class="caja-ahorro-resultado">
-        <p style="color: #32D74B; font-weight: 600;">
-          <i class="fa-solid fa-circle-check"></i> ¡Excelente! No tienes cargas vampiro activas en este momento.
-        </p>
-      </div>
-    `;
+  if (nuevaCantidad <= 0) {
+    eliminarProductoDelCarrito(idProducto);
     return;
   }
 
-  // Uso de reduce para acumular ahorro en Watts, kWh y Bs
-  const potenciaVampiroTotal = vampiros.reduce((acc, d) => acc + d.potenciaWatts, 0);
-  const kwhAhorroMensual = vampiros.reduce((acc, d) => acc + d.consumoKwh, 0);
-  const bsAhorroMensual = vampiros.reduce((acc, d) => acc + d.costoBs, 0);
-  const bsAhorroAnual = bsAhorroMensual * 12;
-
-  cajaSimuladorAhorro.innerHTML = `
-    <div class="caja-ahorro-resultado">
-      <div class="ahorro-fila-stats">
-        <div class="ahorro-stat">
-          <span class="ahorro-etiqueta">Cargas Vampiro</span>
-          <strong class="ahorro-valor" style="color: #FF453A;">${vampiros.length} equipos</strong>
-        </div>
-        <div class="ahorro-stat">
-          <span class="ahorro-etiqueta">Potencia en Reposo</span>
-          <strong class="ahorro-valor">${potenciaVampiroTotal} W</strong>
-        </div>
-        <div class="ahorro-stat">
-          <span class="ahorro-etiqueta">Ahorro Mensual</span>
-          <strong class="ahorro-valor texto-verde">Bs. ${bsAhorroMensual.toFixed(2)} (${kwhAhorroMensual.toFixed(1)} kWh)</strong>
-        </div>
-        <div class="ahorro-stat">
-          <span class="ahorro-etiqueta">Ahorro Anual Proyectado</span>
-          <strong class="ahorro-valor texto-cian">Bs. ${bsAhorroAnual.toFixed(2)}</strong>
-        </div>
-      </div>
-      <button id="btn-aislar-todos-vampiros" class="btn-accion-cian" style="margin-top: 12px; width: 100%;">
-        <i class="fa-solid fa-power-off"></i> Aislar Todos los Equipos Vampiro Ahora
-      </button>
-    </div>
-  `;
-
-  document.getElementById("btn-aislar-todos-vampiros").addEventListener("click", () => {
-    vampiros.forEach((v) => {
-      actualizarDispositivoStorage(v.id, { estado: "inactivo", esVampiro: false });
-    });
-    listaDispositivos = obtenerDispositivosStorage();
-    notificarTecnico(`Se aislaron ${vampiros.length} consumos vampiro con éxito.`, "lime");
-    renderizarDashboardCompleto();
-    calcularSimulacionAhorro();
-  });
+  carritoCompras = actualizarCantidadStorage(idProducto, nuevaCantidad);
+  actualizarVistaCarrito();
+  filtrarYRenderizarCatalogo();
 };
 
 /**
- * Restablece los datos de fábrica de WattVision
+ * Elimina un producto específico del carrito con notificación
+ * @param {number} idProducto - ID del producto a eliminar
  */
-const restablecerSistema = () => {
+const eliminarProductoDelCarrito = (idProducto) => {
+  const itemAEliminar = carritoCompras.find((item) => item.id === idProducto);
+  const nombreProducto = itemAEliminar ? itemAEliminar.nombre : "Producto";
+
+  carritoCompras = eliminarProductoStorage(idProducto);
+  mostrarNotificacion(`"${nombreProducto}" eliminado del carrito`, "warning");
+
+  actualizarVistaCarrito();
+  filtrarYRenderizarCatalogo();
+};
+
+/**
+ * Vacía la totalidad del carrito solicitando confirmación con SweetAlert2
+ */
+const vaciarCarritoCompleto = () => {
+  if (carritoCompras.length === 0) {
+    mostrarNotificacion("El carrito ya está vacío", "warning");
+    return;
+  }
+
   Swal.fire({
-    title: "¿Restablecer telemetría?",
-    text: "Se volverán a cargar los datos originales de monitoreo de WattVision.",
+    title: "¿Vaciar el carrito?",
+    text: "Esta acción quitará todos los productos seleccionados.",
     icon: "question",
     showCancelButton: true,
-    background: "#1E1E1E",
-    color: "#FFFFFF",
-    confirmButtonColor: "#00E5FF",
-    cancelButtonColor: "#2C2C2E",
-    confirmButtonText: "Sí, reiniciar",
+    confirmButtonColor: "#c62828",
+    cancelButtonColor: "#718096",
+    confirmButtonText: "Sí, vaciar",
     cancelButtonText: "Cancelar"
-  }).then(async (res) => {
-    if (res.isConfirmed) {
-      reiniciarDispositivosStorage();
-      await inicializarDatos();
-      notificarTecnico("Sistema restablecido a valores por defecto.", "cyan");
+  }).then((resultado) => {
+    if (resultado.isConfirmed) {
+      vaciarCarritoStorage();
+      carritoCompras = [];
+      actualizarVistaCarrito();
+      filtrarYRenderizarCatalogo();
+
+      Swal.fire({
+        title: "¡Carrito vaciado!",
+        text: "Tu carrito se encuentra ahora sin productos.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
     }
   });
 };
 
 /**
- * Renderiza el dashboard completo actualizando KPIs, Alertas, Gráfico y Tarjetas
+ * Calcula los totales acumulados del carrito utilizando la función de orden superior reduce
+ * @returns {Object} { totalDinero, totalUnidades }
  */
-const renderizarDashboardCompleto = () => {
-  actualizarKpisDOM();
-  renderizarPanelAlertas();
-  renderizarGraficoArea();
-  renderizarDispositivosDOM();
+const calcularTotalesCarrito = () => {
+  // Uso de reduce para acumular dinero total
+  const totalDinero = carritoCompras.reduce(
+    (acumulador, item) => acumulador + item.precio * item.cantidad,
+    0
+  );
+
+  // Uso de reduce para sumar cantidad total de unidades
+  const totalUnidades = carritoCompras.reduce(
+    (acumulador, item) => acumulador + item.cantidad,
+    0
+  );
+
+  return { totalDinero, totalUnidades };
 };
 
 /**
- * Configuración de eventos y listeners de la interfaz
+ * Actualiza el DOM del panel lateral del carrito, badges y totales
+ * Uso de forEach y destructuring
  */
-const inicializarEventos = () => {
-  // Filtros por ambiente
-  botonesFiltroAmbiente.forEach((boton) => {
+const actualizarVistaCarrito = () => {
+  const { totalDinero, totalUnidades } = calcularTotalesCarrito();
+
+  // Actualizar badge del header
+  contadorCarritoBadge.textContent = totalUnidades;
+  contadorCarritoBadge.classList.toggle("activo", totalUnidades > 0);
+
+  // Actualizar totales en el pie del carrito
+  textoTotalCarrito.textContent = `$${totalDinero.toLocaleString("es-AR")}`;
+  textoCantidadItems.textContent = `${totalUnidades} ${totalUnidades === 1 ? "unidad" : "unidades"}`;
+
+  contenedorCarrito.innerHTML = "";
+
+  if (carritoCompras.length === 0) {
+    contenedorCarrito.innerHTML = `
+      <div class="carrito-vacio">
+        <i class="fa-solid fa-cart-shopping icono-carrito-vacio"></i>
+        <p>Tu carrito está vacío</p>
+        <span class="subtexto-carrito">Explora el catálogo y selecciona los productos que necesites.</span>
+      </div>
+    `;
+    botonIniciarCompra.setAttribute("disabled", "true");
+    botonIniciarCompra.classList.add("btn-deshabilitado");
+    return;
+  }
+
+  botonIniciarCompra.removeAttribute("disabled");
+  botonIniciarCompra.classList.remove("btn-deshabilitado");
+
+  // Renderizar cada item del carrito usando forEach
+  carritoCompras.forEach((item) => {
+    const { id, nombre, precio, imagen, cantidad, stock } = item;
+    const subtotal = precio * cantidad;
+
+    const elementoItem = document.createElement("div");
+    elementoItem.className = "item-carrito";
+    elementoItem.innerHTML = `
+      <img src="${imagen}" alt="${nombre}" class="item-carrito-img" />
+      <div class="item-carrito-info">
+        <h4 class="item-carrito-titulo">${nombre}</h4>
+        <span class="item-carrito-precio">$${precio.toLocaleString("es-AR")} c/u</span>
+        <span class="item-carrito-subtotal">Subtotal: $${subtotal.toLocaleString("es-AR")}</span>
+        <div class="item-carrito-controles">
+          <button class="btn-control btn-restar" data-id="${id}" title="Restar">-</button>
+          <span class="item-carrito-cantidad">${cantidad}</span>
+          <button class="btn-control btn-sumar" data-id="${id}" title="Sumar" ${cantidad >= stock ? "disabled" : ""}>+</button>
+          <button class="btn-eliminar-item" data-id="${id}" title="Quitar item">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    contenedorCarrito.appendChild(elementoItem);
+  });
+
+  // Eventos de botones dentro del carrito
+  contenedorCarrito.querySelectorAll(".btn-sumar").forEach((boton) => {
     boton.addEventListener("click", () => {
-      botonesFiltroAmbiente.forEach((b) => b.classList.remove("activa"));
-      boton.classList.add("activa");
-      filtroAmbienteActivo = boton.getAttribute("data-ambiente");
-      renderizarDispositivosDOM();
+      const id = Number(boton.getAttribute("data-id"));
+      modificarCantidadProducto(id, 1);
     });
   });
 
-  // Filtro por estado
-  selectFiltroEstado.addEventListener("change", (e) => {
-    filtroEstadoActivo = e.target.value;
-    renderizarDispositivosDOM();
+  contenedorCarrito.querySelectorAll(".btn-restar").forEach((boton) => {
+    boton.addEventListener("click", () => {
+      const id = Number(boton.getAttribute("data-id"));
+      modificarCantidadProducto(id, -1);
+    });
   });
 
-  // Buscador de dispositivos
-  inputBuscador.addEventListener("input", renderizarDispositivosDOM);
-
-  // Modal para agregar dispositivo
-  btnAgregarDispositivo.addEventListener("click", () => modalDispositivo.classList.add("activo"));
-  btnCerrarModal.addEventListener("click", () => modalDispositivo.classList.remove("activo"));
-  modalDispositivo.addEventListener("click", (e) => {
-    if (e.target === modalDispositivo) modalDispositivo.classList.remove("activo");
+  contenedorCarrito.querySelectorAll(".btn-eliminar-item").forEach((boton) => {
+    boton.addEventListener("click", () => {
+      const id = Number(boton.getAttribute("data-id"));
+      eliminarProductoDelCarrito(id);
+    });
   });
-  formularioDispositivo.addEventListener("submit", agregarNuevoDispositivo);
-
-  // Botón restablecer
-  btnRestablecerDatos.addEventListener("click", restablecerSistema);
-
-  // Simulador de ahorro
-  btnSimularAhorro.addEventListener("click", calcularSimulacionAhorro);
 };
 
-// Inicialización de la aplicación al cargar el DOM
+/**
+ * Control del panel lateral (Offcanvas) del carrito
+ */
+const alternarCarrito = (abrir) => {
+  if (abrir) {
+    panelCarrito.classList.add("abierto");
+    overlayCarrito.classList.add("visible");
+    document.body.style.overflow = "hidden";
+  } else {
+    panelCarrito.classList.remove("abierto");
+    overlayCarrito.classList.remove("visible");
+    document.body.style.overflow = "auto";
+  }
+};
+
+/**
+ * Modal de Checkout y Proceso Final de Compra
+ */
+const abrirModalCheckout = () => {
+  if (carritoCompras.length === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Carrito vacío",
+      text: "Agrega al menos un producto para proceder al pago.",
+      confirmButtonColor: "#2c3e50"
+    });
+    return;
+  }
+
+  actualizarResumenModal();
+  modalCheckout.classList.add("activo");
+  alternarCarrito(false);
+};
+
+const cerrarModalCheckout = () => {
+  modalCheckout.classList.remove("activo");
+};
+
+/**
+ * Calcula descuento o recargo según método de pago y actualiza el modal
+ */
+const actualizarResumenModal = () => {
+  const { totalDinero } = calcularTotalesCarrito();
+  const metodoSeleccionado = selectMetodoPago.value;
+
+  // Operador ternario para aplicar 10% de descuento en transferencia
+  const aplicaDescuento = metodoSeleccionado === "transferencia";
+  const porcentajeDescuento = aplicaDescuento ? 0.10 : 0;
+  const montoDescuento = totalDinero * porcentajeDescuento;
+  const totalFinal = totalDinero - montoDescuento;
+
+  if (aplicaDescuento) {
+    textoDescuentoModal.innerHTML = `
+      <span class="descuento-aplicado">
+        Descuento del 10% por transferencia aplicado (-$${montoDescuento.toLocaleString("es-AR")})
+      </span>
+    `;
+  } else {
+    textoDescuentoModal.innerHTML = "";
+  }
+
+  totalModalCheckout.textContent = `$${totalFinal.toLocaleString("es-AR")}`;
+};
+
+/**
+ * Procesa la orden de compra y muestra comprobante con SweetAlert2
+ */
+const procesarOrdenCompra = (evento) => {
+  evento.preventDefault();
+
+  const nombre = document.getElementById("nombre-comprador").value.trim();
+  const email = document.getElementById("email-comprador").value.trim();
+  const telefono = document.getElementById("telefono-comprador").value.trim();
+  const direccion = document.getElementById("direccion-comprador").value.trim();
+  const metodoPago = selectMetodoPago.value;
+
+  if (!nombre || !email || !telefono || !direccion) {
+    Swal.fire({
+      icon: "error",
+      title: "Campos incompletos",
+      text: "Por favor completa todos los datos solicitados en el formulario.",
+      confirmButtonColor: "#2c3e50"
+    });
+    return;
+  }
+
+  // Generar número de orden aleatorio único
+  const numeroOrden = "ORD-" + Math.floor(100000 + Math.random() * 900000);
+  const { totalDinero } = calcularTotalesCarrito();
+  const montoFinal = metodoPago === "transferencia" ? totalDinero * 0.90 : totalDinero;
+
+  // Estructuramos el detalle de los productos adquiridos con map
+  const listaComprada = carritoCompras
+    .map((item) => `• ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toLocaleString("es-AR")})`)
+    .join("<br>");
+
+  // Simulación de procesamiento con loading de SweetAlert2
+  Swal.fire({
+    title: "Procesando orden...",
+    html: "Estamos verificando la disponibilidad y registrando tu compra.",
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    },
+    timer: 1600
+  }).then(() => {
+    cerrarModalCheckout();
+    formularioCheckout.reset();
+
+    Swal.fire({
+      icon: "success",
+      title: "¡Compra confirmada!",
+      html: `
+        <div style="text-align: left; font-size: 0.92rem; margin-top: 10px; color: #2d3748;">
+          <p><strong>N° de Orden:</strong> <span style="color:#2c3e50; font-weight:700;">#${numeroOrden}</span></p>
+          <p><strong>Cliente:</strong> ${nombre}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Dirección:</strong> ${direccion}</p>
+          <p><strong>Método de pago:</strong> ${metodoPago.toUpperCase()}</p>
+          <hr style="margin: 10px 0; border: none; border-top: 1px solid #e2e8f0;">
+          <p><strong>Productos:</strong></p>
+          <div style="background: #f8f9fa; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; max-height: 120px; overflow-y: auto;">
+            ${listaComprada}
+          </div>
+          <hr style="margin: 10px 0; border: none; border-top: 1px solid #e2e8f0;">
+          <p style="font-size: 1.05rem; text-align: right; color: #2c3e50;"><strong>Total: $${montoFinal.toLocaleString("es-AR")}</strong></p>
+        </div>
+      `,
+      confirmButtonText: "Entendido",
+      confirmButtonColor: "#2c3e50"
+    });
+
+    // Vaciar el carrito y persistencia
+    vaciarCarritoStorage();
+    carritoCompras = [];
+    actualizarVistaCarrito();
+    filtrarYRenderizarCatalogo();
+  });
+};
+
+/**
+ * Inicialización de listeners y eventos de la aplicación
+ */
+const inicializarEventos = () => {
+  // Panel lateral de carrito
+  botonAbrirCarrito.addEventListener("click", () => alternarCarrito(true));
+  botonCerrarCarrito.addEventListener("click", () => alternarCarrito(false));
+  overlayCarrito.addEventListener("click", () => alternarCarrito(false));
+  botonVaciarCarrito.addEventListener("click", vaciarCarritoCompleto);
+
+  // Modal checkout
+  botonIniciarCompra.addEventListener("click", abrirModalCheckout);
+  botonCerrarModal.addEventListener("click", cerrarModalCheckout);
+  selectMetodoPago.addEventListener("change", actualizarResumenModal);
+  formularioCheckout.addEventListener("submit", procesarOrdenCompra);
+
+  // Cerrar modal al hacer click fuera
+  modalCheckout.addEventListener("click", (e) => {
+    if (e.target === modalCheckout) cerrarModalCheckout();
+  });
+
+  // Filtros por categorías
+  botonesCategorias.forEach((boton) => {
+    boton.addEventListener("click", () => {
+      botonesCategorias.forEach((b) => b.classList.remove("activa"));
+      boton.classList.add("activa");
+      categoriaActiva = boton.getAttribute("data-categoria");
+      filtrarYRenderizarCatalogo();
+    });
+  });
+
+  // Buscador interactivo en vivo con evento input
+  inputBuscador.addEventListener("input", (evento) => {
+    busquedaActiva = evento.target.value;
+    filtrarYRenderizarCatalogo();
+  });
+
+  // Selector de ordenamiento
+  selectOrden.addEventListener("change", (evento) => {
+    ordenActivo = evento.target.value;
+    filtrarYRenderizarCatalogo();
+  });
+};
+
+/**
+ * Punto de entrada principal cuando el DOM está listo
+ */
 document.addEventListener("DOMContentLoaded", () => {
   inicializarEventos();
-  inicializarDatos();
+  actualizarVistaCarrito();
+  cargarProductos();
 });
