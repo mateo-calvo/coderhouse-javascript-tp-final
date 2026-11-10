@@ -3,251 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TechZone | Simulador de Tienda de Hardware y Tecnología</title>
-  
-  <!-- Favicon -->
+  <title>WattVision | Sistema de Monitoreo Eléctrico</title>
+
+  <!-- Favicon vectorial oficial -->
   <link rel="icon" type="image/svg+xml" href="assets/images/logo.svg">
-  
-  <!-- Tipografía Google Fonts -->
+
+  <!-- Tipografías Oficiales DESIGN.md: Inter (Títulos y Cuerpo) y JetBrains Mono (Métricas) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- FontAwesome (Íconos) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Iconografía Técnica FontAwesome (Rayo, Enchufe, Medidor) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
+
   <!-- Librería Toastify CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-  
-  <!-- Estilos propios -->
+
+  <!-- Estilos Técnicos WattVision (Dark Mode #121212) -->
   <link rel="stylesheet" href="css/style.css">
-  
+
   <!-- Librerías Externas JS (con defer) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  
-  <!-- Scripts propios del proyecto (con defer obligatoriamente) -->
+
+  <!-- Scripts Propios del Sistema (con defer en <head> obligatoriamente) -->
   <script defer src="js/storage.js"></script>
   <script defer src="js/main.js"></script>
 </head>
 <body>
 
-  <!-- Encabezado Principal -->
-  <header class="header-principal">
-    <nav class="barra-navegacion">
-      <a href="#" class="marca">
-        <div class="marca-icono">
-          <i class="fa-solid fa-microchip"></i>
+  <!-- Encabezado Principal WattVision -->
+  <header class="header-wattvision">
+    <div class="header-contenedor">
+      <div class="marca-wattvision">
+        <div class="marca-icono-circulo">
+          <i class="fa-solid fa-gauge-high"></i>
         </div>
-        <div class="marca-texto">Tech<span>Zone</span></div>
-      </a>
-
-      <!-- Buscador en Vivo -->
-      <div class="buscador-contenedor">
-        <i class="fa-solid fa-magnifying-glass buscador-icono"></i>
-        <input 
-          type="search" 
-          id="input-buscador" 
-          class="input-busqueda" 
-          placeholder="Buscar periféricos, monitores, placas..." 
-          aria-label="Buscar productos"
-        >
+        <div class="marca-info">
+          <h1>Watt<span>Vision</span></h1>
+          <span class="subtexto-region">Telemetría Eléctrica Residencial & Comercial • Bolivia (Tarifa Bs. 0.85/kWh)</span>
+        </div>
       </div>
 
-      <!-- Acciones de Usuario / Carrito -->
-      <div class="acciones-usuario">
-        <button id="btn-abrir-carrito" class="btn-carrito-header" aria-label="Abrir Carrito">
-          <i class="fa-solid fa-cart-shopping"></i>
-          <span>Carrito</span>
-          <span id="contador-carrito" class="badge-contador">0</span>
+      <div class="header-acciones">
+        <div class="badge-en-vivo">
+          <span class="punto-latido"></span>
+          <span id="badge-estado-envivo">EN VIVO • TELEMETRÍA CONECTADA</span>
+        </div>
+        <button id="btn-agregar-dispositivo" class="btn-accion-cian" title="Conectar nuevo medidor">
+          <i class="fa-solid fa-plug-circle-plus"></i>
+          <span>Nuevo Dispositivo</span>
+        </button>
+        <button id="btn-restablecer-datos" class="btn-secundario-oscuro" title="Restablecer datos originales">
+          <i class="fa-solid fa-rotate-right"></i>
         </button>
       </div>
-    </nav>
+    </div>
   </header>
 
-  <!-- Banner Promocional (Hero) -->
-  <section class="hero-banner">
-    <div class="hero-contenido">
-      <span class="hero-etiqueta">
-        <i class="fa-solid fa-bolt"></i> Nueva Temporada Gaming & Hardware
-      </span>
-      <h1 class="hero-titulo">Equipa tu Setup con la Mejor Tecnología</h1>
-      <p class="hero-subtitulo">
-        Descubre nuestra selección de componentes de alto rendimiento, notebooks y accesorios premium. Envío inmediato a todo el país.
-      </p>
+  <!-- Dashboard Principal (Layout en 12 Columnas) -->
+  <main class="dashboard-contenedor">
+
+    <!-- Indicador de Carga Asíncrono (Fetch) -->
+    <div id="spinner-carga" class="spinner-carga">
+      <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+      <p style="margin-top: 8px; font-size: 13px;">Sincronizando telemetría de medidores inteligentes...</p>
     </div>
-  </section>
 
-  <!-- Contenedor Principal -->
-  <main class="main-contenido">
-    
-    <!-- Filtros por Categoría y Ordenamiento -->
-    <section class="filtros-herramientas" aria-label="Filtros de catálogo">
-      <div class="categorias-chips">
-        <button class="btn-categoria activa" data-categoria="todas">
-          <i class="fa-solid fa-border-all"></i> Todos los Productos
-        </button>
-        <button class="btn-categoria" data-categoria="perifericos">
-          <i class="fa-solid fa-keyboard"></i> Periféricos
-        </button>
-        <button class="btn-categoria" data-categoria="monitores">
-          <i class="fa-solid fa-display"></i> Monitores
-        </button>
-        <button class="btn-categoria" data-categoria="componentes">
-          <i class="fa-solid fa-memory"></i> Componentes
-        </button>
-        <button class="btn-categoria" data-categoria="laptops">
-          <i class="fa-solid fa-laptop"></i> Laptops
-        </button>
-      </div>
-
-      <div class="barra-orden">
-        <div class="orden-contenedor">
-          <label for="select-orden"><i class="fa-solid fa-arrow-down-short-wide"></i> Ordenar por:</label>
-          <select id="select-orden" class="select-custom">
-            <option value="defecto">Recomendados</option>
-            <option value="precio-menor">Precio: Menor a Mayor</option>
-            <option value="precio-mayor">Precio: Mayor a Menor</option>
-            <option value="nombre-az">Nombre: A - Z</option>
-          </select>
+    <!-- Fila 1: 3 Columnas de KPIs Superiores (Watts, kWh, Bs.) -->
+    <section class="seccion-kpis" aria-label="Métricas Principales">
+      <!-- KPI 1: Potencia Instantánea en Watts -->
+      <article class="kpi-tarjeta kpi-watts">
+        <div class="kpi-info">
+          <span class="kpi-etiqueta">Demanda Actual (Potencia)</span>
+          <div id="kpi-potencia-watts" class="kpi-valor">0 W</div>
+          <span class="kpi-subdato">Carga activa en tiempo real</span>
         </div>
-      </div>
+        <div class="kpi-icono-caja">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+      </article>
+
+      <!-- KPI 2: Consumo Acumulado en kWh -->
+      <article class="kpi-tarjeta kpi-kwh">
+        <div class="kpi-info">
+          <span class="kpi-etiqueta">Consumo Mensual Acumulado</span>
+          <div id="kpi-consumo-kwh" class="kpi-valor">0.0 kWh</div>
+          <span class="kpi-subdato">Lectura agregada de sensores</span>
+        </div>
+        <div class="kpi-icono-caja">
+          <i class="fa-solid fa-gauge"></i>
+        </div>
+      </article>
+
+      <!-- KPI 3: Equivalencia en Bolivianos (Bs.) -->
+      <article class="kpi-tarjeta kpi-bolivianos">
+        <div class="kpi-info">
+          <span class="kpi-etiqueta">Costo Estimado Facturación</span>
+          <div id="kpi-costo-bs" class="kpi-valor">Bs. 0.00</div>
+          <span class="kpi-subdato">Cálculo según tarifa residencial</span>
+        </div>
+        <div class="kpi-icono-caja">
+          <i class="fa-solid fa-coins"></i>
+        </div>
+      </article>
     </section>
 
-    <!-- Spinner de Carga Asíncrono (Fetch) -->
-    <div id="spinner-carga" class="spinner-contenedor">
-      <div class="spinner"></div>
-      <p>Cargando catálogo de productos...</p>
+    <!-- Fila 2: Gráfico de Área (8 Columnas) + Panel de Alertas (4 Columnas) -->
+    <div class="grid-12-col">
+      <!-- Gráfico de Área (8 Columnas) -->
+      <section class="tarjeta-watt columna-grafico-8">
+        <div class="tarjeta-header-fila">
+          <h2 class="titulo-seccion">
+            <i class="fa-solid fa-chart-area"></i> Curva de Carga y Demanda Horaria (24h)
+          </h2>
+          <span style="font-size: 11px; color: var(--texto-secundario); font-family: var(--fuente-metricas);">
+            DATOS EN CIAN (#00E5FF) • ESCALA EN WATTS
+          </span>
+        </div>
+        <div class="grafico-wrapper">
+          <canvas id="grafico-consumo"></canvas>
+        </div>
+      </section>
+
+      <!-- Panel de Alertas Técnicas (4 Columnas) -->
+      <section class="tarjeta-watt columna-alertas-4">
+        <div class="tarjeta-header-fila">
+          <h2 class="titulo-seccion">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--acento-alerta);"></i> Alertas y Cargas Vampiro
+          </h2>
+          <span id="contador-alertas" class="alerta-tag">0</span>
+        </div>
+
+        <div id="contenedor-alertas" class="contenedor-alertas-lista">
+          <!-- Se inyecta dinámicamente con JavaScript -->
+        </div>
+      </section>
     </div>
 
-    <!-- Catálogo de Productos Dinámico -->
-    <section 
-      id="contenedor-productos" 
-      class="grilla-productos" 
-      aria-live="polite"
-    >
-      <!-- Se inyecta dinámicamente mediante JavaScript -->
+    <!-- Fila 3: Simulador de Desconexión de Cargas Vampiro -->
+    <section class="tarjeta-watt seccion-simulador-vampiro">
+      <div class="tarjeta-header-fila">
+        <h2 class="titulo-seccion">
+          <i class="fa-solid fa-piggy-bank" style="color: var(--acento-secundario);"></i> Simulador de Eficiencia Energética (Eliminación Cargas Standby / Vampiro)
+        </h2>
+        <button id="btn-simular-ahorro" class="btn-secundario-oscuro">
+          <i class="fa-solid fa-calculator"></i> Calcular Proyección de Ahorro
+        </button>
+      </div>
+      <p style="color: var(--texto-secundario); font-size: 13px;">
+        Los consumos "vampiro" o standby representan energía pasiva que se factura incluso cuando los equipos están en reposo. Evalúa tu impacto en Bolivianos y kWh.
+      </p>
+      <div id="caja-simulador-ahorro"></div>
+    </section>
+
+    <!-- Fila 4: Tabla de Dispositivos y Cargas Monitoreadas (12 Columnas) -->
+    <section class="tarjeta-watt seccion-dispositivos">
+      <div class="tarjeta-header-fila">
+        <h2 class="titulo-seccion">
+          <i class="fa-solid fa-network-wired"></i> Matriz de Dispositivos & Interruptores Inteligentes
+        </h2>
+      </div>
+
+      <!-- Filtros Técnicos y Búsqueda -->
+      <div class="controles-tabla-fila">
+        <div class="filtros-ambiente-grupo">
+          <button class="btn-filtro-ambiente activa" data-ambiente="todos">Todos los Ambientes</button>
+          <button class="btn-filtro-ambiente" data-ambiente="Sala de Estar">Sala de Estar</button>
+          <button class="btn-filtro-ambiente" data-ambiente="Cocina">Cocina</button>
+          <button class="btn-filtro-ambiente" data-ambiente="Oficina">Oficina</button>
+          <button class="btn-filtro-ambiente" data-ambiente="Taller">Taller</button>
+          <button class="btn-filtro-ambiente" data-ambiente="Baño Principal">Baños</button>
+        </div>
+
+        <div class="filtros-derecha">
+          <select id="select-filtro-estado" class="input-tecnico">
+            <option value="todos">Todos los Estados</option>
+            <option value="activo">Solo Activos</option>
+            <option value="alerta">En Alerta / Sobrecarga</option>
+            <option value="vampiro">Cargas Vampiro</option>
+            <option value="inactivo">Desconectados</option>
+          </select>
+          <input type="search" id="input-buscador-disp" class="input-tecnico" placeholder="Buscar por equipo...">
+        </div>
+      </div>
+
+      <!-- Encabezado de Columnas de la Tabla -->
+      <div class="tabla-dispositivos-encabezado">
+        <span>Equipo / Ubicación</span>
+        <span>Potencia Activa</span>
+        <span>Consumo Mensual</span>
+        <span>Estado Telemetría</span>
+        <span style="text-align: right;">Interruptor / Acción</span>
+      </div>
+
+      <!-- Contenedor dinámico de filas de la tabla -->
+      <div id="contenedor-dispositivos">
+        <!-- Renderizado dinámicamente mediante JavaScript -->
+      </div>
     </section>
 
   </main>
 
-  <!-- Overlay para oscurecer el fondo cuando se abre el carrito -->
-  <div id="overlay-carrito" class="overlay-carrito"></div>
-
-  <!-- Panel Lateral del Carrito (Offcanvas) -->
-  <aside id="panel-carrito" class="panel-carrito" aria-label="Carrito de compras">
-    <div class="panel-carrito-header">
-      <h3><i class="fa-solid fa-cart-shopping"></i> Tu Carrito</h3>
-      <button id="btn-cerrar-carrito" class="btn-cerrar" aria-label="Cerrar carrito">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <div id="contenedor-carrito" class="panel-carrito-cuerpo">
-      <!-- Se inyecta dinámicamente mediante JavaScript -->
-    </div>
-
-    <div class="panel-carrito-footer">
-      <div class="resumen-linea">
-        <span>Artículos seleccionados:</span>
-        <strong id="cantidad-items-carrito">0 unidades</strong>
-      </div>
-      <div class="resumen-linea resumen-total">
-        <span>Total estimado:</span>
-        <span id="total-carrito">$0</span>
+  <!-- Modal para Agregar Nuevo Dispositivo / Sensor -->
+  <div id="modal-dispositivo" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-caja">
+      <div class="modal-header-fila">
+        <h3 class="titulo-seccion">
+          <i class="fa-solid fa-plug-circle-bolt"></i> Calibrar Nuevo Sensor
+        </h3>
+        <button id="btn-cerrar-modal" class="btn-cerrar-modal" aria-label="Cerrar modal">&times;</button>
       </div>
 
-      <div class="acciones-carrito">
-        <button id="btn-vaciar-carrito" class="btn btn-peligro" title="Vaciar Carrito">
-          <i class="fa-solid fa-trash-can"></i> Vaciar
-        </button>
-        <button id="btn-iniciar-compra" class="btn btn-primario btn-ancho-completo">
-          <i class="fa-solid fa-check"></i> Finalizar Compra
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Modal de Checkout / Proceso de Compra -->
-  <div id="modal-checkout" class="modal-checkout-backdrop" role="dialog" aria-modal="true">
-    <div class="modal-checkout-caja">
-      <div class="modal-checkout-header">
-        <h3><i class="fa-solid fa-shield-halved"></i> Finalizar Orden de Compra</h3>
-        <button id="btn-cerrar-modal" class="btn-cerrar" aria-label="Cerrar ventana">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <form id="formulario-checkout" class="formulario-checkout">
-        <div class="campo-grupo">
-          <label for="nombre-comprador"><i class="fa-solid fa-user"></i> Nombre y Apellido:</label>
-          <input type="text" id="nombre-comprador" class="campo-input" placeholder="Ej. Mateo Gómez" required>
+      <form id="formulario-dispositivo">
+        <div class="campo-form">
+          <label for="nuevo-disp-nombre">Nombre del Dispositivo / Carga:</label>
+          <input type="text" id="nuevo-disp-nombre" class="input-tecnico" placeholder="Ej. Termotanque Eléctrico" required>
         </div>
 
-        <div class="campo-grupo">
-          <label for="email-comprador"><i class="fa-solid fa-envelope"></i> Correo Electrónico:</label>
-          <input type="email" id="email-comprador" class="campo-input" placeholder="ejemplo@correo.com" required>
+        <div class="campo-form">
+          <label for="nuevo-disp-ambiente">Ambiente / Ubicación:</label>
+          <input type="text" id="nuevo-disp-ambiente" class="input-tecnico" placeholder="Ej. Cocina, Taller, Oficina" required>
         </div>
 
-        <div class="campo-grupo">
-          <label for="telefono-comprador"><i class="fa-solid fa-phone"></i> Teléfono Celular:</label>
-          <input type="tel" id="telefono-comprador" class="campo-input" placeholder="+54 9 11 1234-5678" required>
+        <div class="campo-form">
+          <label for="nuevo-disp-potencia">Potencia Nominal de Operación (Watts):</label>
+          <input type="number" id="nuevo-disp-potencia" class="input-tecnico" placeholder="Ej. 1500" min="1" required>
         </div>
 
-        <div class="campo-grupo">
-          <label for="direccion-comprador"><i class="fa-solid fa-location-dot"></i> Dirección de Entrega:</label>
-          <input type="text" id="direccion-comprador" class="campo-input" placeholder="Av. Corrientes 1234, CABA" required>
+        <div class="campo-form">
+          <label for="nuevo-disp-limite">Umbral Límite de Alerta (Watts):</label>
+          <input type="number" id="nuevo-disp-limite" class="input-tecnico" placeholder="Ej. 1800">
         </div>
 
-        <div class="campo-grupo">
-          <label for="metodo-pago"><i class="fa-solid fa-credit-card"></i> Forma de Pago:</label>
-          <select id="metodo-pago" class="campo-input">
-            <option value="tarjeta">Tarjeta de Crédito / Débito (Precio Regular)</option>
-            <option value="transferencia">Transferencia Bancaria (10% de Descuento Especial)</option>
-            <option value="efectivo">Efectivo contra Entrega</option>
-          </select>
+        <div class="checkbox-form-fila">
+          <input type="checkbox" id="nuevo-disp-vampiro">
+          <label for="nuevo-disp-vampiro">Es una carga pasiva en reposo (Consumo Vampiro / Standby)</label>
         </div>
 
-        <!-- Resumen dentro del modal -->
-        <div class="caja-resumen-pago">
-          <div class="resumen-linea">
-            <span>Total a abonar:</span>
-            <strong id="total-modal-checkout" class="tarjeta-precio">$0</strong>
-          </div>
-          <div id="descuento-modal-checkout"></div>
-        </div>
-
-        <button type="submit" class="btn btn-primario btn-ancho-completo" style="margin-top: 0.5rem;">
-          <i class="fa-solid fa-lock"></i> Confirmar y Generar Orden
+        <button type="submit" class="btn-accion-cian" style="width: 100%; justify-content: center;">
+          <i class="fa-solid fa-check"></i> Registrar Dispositivo en WattVision
         </button>
       </form>
     </div>
   </div>
 
-  <!-- Pie de Página -->
-  <footer class="footer-principal">
-    <div class="footer-contenido">
-      <div class="marca" style="color: white;">
-        <div class="marca-icono">
-          <i class="fa-solid fa-microchip"></i>
-        </div>
-        <div class="marca-texto">Tech<span>Zone</span></div>
-      </div>
-      <p>Simulador interactivo de comercio electrónico desarrollado con JavaScript Vanilla.</p>
-      
-      <div class="footer-badges">
-        <span class="badge-tecnologia">HTML5 Semántico</span>
-        <span class="badge-tecnologia">CSS3 Moderno</span>
-        <span class="badge-tecnologia">Fetch API (Async / Await)</span>
-        <span class="badge-tecnologia">DOM & Eventos</span>
-        <span class="badge-tecnologia">LocalStorage</span>
-        <span class="badge-tecnologia">SweetAlert2</span>
-        <span class="badge-tecnologia">Toastify JS</span>
-      </div>
-
-      <p class="footer-copy">
-        &copy; 2026 TechZone - Proyecto Final Curso de JavaScript | Coderhouse
-      </p>
+  <!-- Pie de Página Técnico -->
+  <footer class="footer-wattvision">
+    <div class="footer-contenedor">
+      <span><strong>WattVision</strong> • Telemetría y Gestión de Eficiencia Energética</span>
+      <span>Proyecto Final JavaScript • Coderhouse | Tarifa referencial Bolivia: 0.85 Bs/kWh</span>
     </div>
   </footer>
 

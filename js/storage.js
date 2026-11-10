@@ -1,67 +1,81 @@
 /**
- * storage.js
- * Módulo encargado de gestionar la persistencia de datos en LocalStorage
- * Cumple con operaciones de: guardar, modificar, borrar individual y vaciar.
- * Aplica operadores avanzados: operador OR, operador ternario y destructuring.
+ * storage.js - Sistema de Monitoreo Eléctrico WattVision
+ * Módulo de persistencia en LocalStorage
+ * Gestiona operaciones de guardar, modificar, borrar individual y vaciar/restablecer.
+ * Implementa operadores avanzados: operador OR, operador ternario y destructuring.
  */
 
-const CLAVE_STORAGE_CARRITO = "carrito_techzone";
+const CLAVE_STORAGE_WATT = "wattvision_dispositivos";
+const CLAVE_STORAGE_TARIFA = "wattvision_tarifa_bs";
+
+// Tarifa promedio en Bolivia por kWh (Bs. 0.85 estándar domiciliario)
+const TARIFA_BOLIVIA_DEFAULT = 0.85;
 
 /**
- * Obtiene los productos guardados en LocalStorage.
- * Uso de operador OR (||) para fallback a arreglo vacío en caso de ser null.
- * @returns {Array} Listado de productos en el carrito
+ * Obtiene los dispositivos guardados en LocalStorage.
+ * Uso de operador OR (||) y operador ternario para retorno seguro.
+ * @returns {Array|null} Array de dispositivos o null si no existe en storage
  */
-const obtenerCarritoStorage = () => {
-  const datosGuardados = localStorage.getItem(CLAVE_STORAGE_CARRITO);
-  // Operador OR y operador ternario para retornar los datos parseados
-  return datosGuardados ? JSON.parse(datosGuardados) : [];
+const obtenerDispositivosStorage = () => {
+  const datosGuardados = localStorage.getItem(CLAVE_STORAGE_WATT);
+  return datosGuardados ? JSON.parse(datosGuardados) : null;
 };
 
 /**
- * Guarda el array de productos del carrito en LocalStorage.
- * @param {Array} carrito - Listado actualizado de items
+ * Guarda el array de dispositivos en LocalStorage.
+ * @param {Array} dispositivos - Lista de dispositivos a persistir
  */
-const guardarCarritoStorage = (carrito) => {
-  localStorage.setItem(CLAVE_STORAGE_CARRITO, JSON.stringify(carrito));
+const guardarDispositivosStorage = (dispositivos) => {
+  localStorage.setItem(CLAVE_STORAGE_WATT, JSON.stringify(dispositivos));
 };
 
 /**
- * Modifica la cantidad de unidades de un producto específico en el storage.
- * Uso de destructuring al evaluar el item.
- * @param {number} idProducto - ID del producto a modificar
- * @param {number} nuevaCantidad - Nueva cantidad de unidades
- * @returns {Array} Carrito actualizado
+ * Modifica el estado o los datos de un dispositivo específico.
+ * Uso de destructuring y operador ternario.
+ * @param {number} idDispositivo - ID del dispositivo a actualizar
+ * @param {Object} cambios - Propiedades modificadas
+ * @returns {Array} Listado actualizado
  */
-const actualizarCantidadStorage = (idProducto, nuevaCantidad) => {
-  const carritoActual = obtenerCarritoStorage();
-  
-  const carritoModificado = carritoActual.map((item) => {
-    const { id } = item;
-    // Operador ternario para actualizar la cantidad si coincide el id
-    return id === idProducto ? { ...item, cantidad: nuevaCantidad } : item;
+const actualizarDispositivoStorage = (idDispositivo, cambios) => {
+  const dispositivos = obtenerDispositivosStorage() || [];
+
+  const listaActualizada = dispositivos.map((dispositivo) => {
+    const { id } = dispositivo;
+    // Operador ternario para aplicar cambios solo al dispositivo coincidente
+    return id === idDispositivo ? { ...dispositivo, ...cambios } : dispositivo;
   });
 
-  guardarCarritoStorage(carritoModificado);
-  return carritoModificado;
+  guardarDispositivosStorage(listaActualizada);
+  return listaActualizada;
 };
 
 /**
- * Elimina un producto específico del carrito en el storage.
- * @param {number} idProducto - ID del producto a remover
- * @returns {Array} Carrito resultante tras la eliminación
+ * Elimina un dispositivo monitoreado del LocalStorage.
+ * @param {number} idDispositivo - ID del dispositivo a remover
+ * @returns {Array} Listado resultante tras la eliminación
  */
-const eliminarProductoStorage = (idProducto) => {
-  const carritoActual = obtenerCarritoStorage();
-  // Uso de filter para remover el item especificado
-  const carritoFiltrado = carritoActual.filter((item) => item.id !== idProducto);
-  guardarCarritoStorage(carritoFiltrado);
-  return carritoFiltrado;
+const eliminarDispositivoStorage = (idDispositivo) => {
+  const dispositivos = obtenerDispositivosStorage() || [];
+  const listaFiltrada = dispositivos.filter((disp) => disp.id !== idDispositivo);
+  guardarDispositivosStorage(listaFiltrada);
+  return listaFiltrada;
 };
 
 /**
- * Vacía por completo el carrito almacenado en LocalStorage.
+ * Vacía y reinicia los dispositivos almacenados en LocalStorage.
  */
-const vaciarCarritoStorage = () => {
-  localStorage.removeItem(CLAVE_STORAGE_CARRITO);
+const reiniciarDispositivosStorage = () => {
+  localStorage.removeItem(CLAVE_STORAGE_WATT);
+};
+
+/**
+ * Guarda o recupera la tarifa eléctrica en Bolivianos (Bs./kWh)
+ */
+const obtenerTarifaStorage = () => {
+  const tarifaGuardada = localStorage.getItem(CLAVE_STORAGE_TARIFA);
+  return tarifaGuardada ? parseFloat(tarifaGuardada) : TARIFA_BOLIVIA_DEFAULT;
+};
+
+const guardarTarifaStorage = (tarifa) => {
+  localStorage.setItem(CLAVE_STORAGE_TARIFA, JSON.stringify(tarifa));
 };

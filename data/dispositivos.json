@@ -1,0 +1,101 @@
+[
+  {
+    "id": 1,
+    "nombre": "Aire Acondicionado Inverter",
+    "ambiente": "Sala de Estar",
+    "potenciaWatts": 1850,
+    "consumoKwh": 84.5,
+    "costoBs": 71.82,
+    "estado": "activo",
+    "esVampiro": false,
+    "limiteWatts": 2000
+  },
+  {
+    "id": 2,
+    "nombre": "Refrigerador No-Frost",
+    "ambiente": "Cocina",
+    "potenciaWatts": 280,
+    "consumoKwh": 42.0,
+    "costoBs": 35.70,
+    "estado": "activo",
+    "esVampiro": false,
+    "limiteWatts": 350
+  },
+  {
+    "id": 3,
+    "nombre": "Calefón Eléctrico",
+    "ambiente": "Baño Principal",
+    "potenciaWatts": 3200,
+    "consumoKwh": 115.2,
+    "costoBs": 97.92,
+    "estado": "alerta",
+    "esVampiro": false,
+    "limiteWatts": 3000
+  },
+  {
+    "id": 4,
+    "nombre": "Smart TV 65\" 4K (Standby)",
+    "ambiente": "Sala de Estar",
+    "potenciaWatts": 35,
+    "consumoKwh": 18.9,
+    "costoBs": 16.06,
+    "estado": "vampiro",
+    "esVampiro": true,
+    "limiteWatts": 15
+  },
+  {
+    "id": 5,
+    "nombre": "Horno Microondas (Reloj Standby)",
+    "ambiente": "Cocina",
+    "potenciaWatts": 15,
+    "consumoKwh": 8.1,
+    "costoBs": 6.88,
+    "estado": "vampiro",
+    "esVampiro": true,
+    "limiteWatts": 10
+  },
+  {
+    "id": 6,
+    "nombre": "PC Gamer & Estación de Trabajo",
+    "ambiente": "Oficina",
+    "potenciaWatts": 620,
+    "consumoKwh": 55.8,
+    "costoBs": 47.43,
+    "estado": "activo",
+    "esVampiro": false,
+    "limiteWatts": 750
+  },
+  {
+    "id": 7,
+    "nombre": "Compresor de Aire Taller",
+    "ambiente": "Taller",
+    "potenciaWatts": 2200,
+    "consumoKwh": 78.4,
+    "costoBs": 66.64,
+    "estado": "inactivo",
+    "esVampiro": false,
+    "limiteWatts": 2400
+  },
+  {
+    "id": 8,
+    "nombre": "Consola de Videojuegos (Reposo)",
+    "ambiente": "Dormitorio",
+    "potenciaWatts": 25,
+    "consumoKwh": 13.5,
+    "costoBs": 11.47,
+    "estado": "vampiro",
+    "esVampiro": true,
+    "limiteWatts": 12
+  },
+  {
+    "id": 9,
+    "nombre": "Bomba de Agua Cisterna",
+    "ambiente": "Patio Técnico",
+    "potenciaWatts": 1100,
+    "consumoKwh": 33.0,
+    "costoBs": 28.05,
+    "estado": "activo",
+    "esVampiro": false,
+    "limiteWatts": 1200
+  }
+]
